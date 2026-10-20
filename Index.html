@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>AntiScooters</title>
+<style>
+  :root {
+    --bg: #f2f2f7;
+    --bg-2: #ffffff;
+    --fg: #1d1d1f;
+    --fg-2: #6e6e73;
+    --fg-3: #a1a1a6;
+    --line: rgba(0,0,0,0.07);
+    --line-strong: rgba(0,0,0,0.12);
+    --accent: #ffcc00;
+    --accent-ink: #1d1d1f;
+    --green: #34c759;
+    --red: #ff3b30;
+    --orange: #ff9500;
+    --blue: #007aff;
+    --glass: rgba(255,255,255,0.68);
+    --glass-strong: rgba(255,255,255,0.9);
+    --shadow-1: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-2: 0 8px 24px rgba(0,0,0,0.08);
+    --r-1: 12px; --r-2: 16px; --r-3: 22px;
+    --ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --pad: 16px;
+  }
+  [data-theme="dark"] {
+    --bg: #000000;
+    --bg-2: #1c1c1e;
+    --fg: #f5f5f7;
+    --fg-2: #98989d;
+    --fg-3: #636366;
+    --line: rgba(255,255,255,0.08);
+    --line-strong: rgba(255,255,255,0.14);
+    --glass: rgba(28,28,30,0.7);
+    --glass-strong: rgba(28,28,30,0.92);
+    --shadow-1: 0 1px 2px rgba(0,0,0,0.5);
+    --shadow-2: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+    font-feature-settings: "ss01","cv11","cv02";
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden; position: fixed; inset: 0;
+    transition: background .3s var(--ease), color .3s var(--ease);
+  }
+  button, input { font: inherit; color: inherit; }
+  button { background: none; border: none; cursor: pointer; padding: 0; }
+  input { border: none; outline: none; background: transparent; }
+  svg { display: block; }
+
+  @media (hover: hover) {
+    .device:hover, .card-row[style*="cursor"]:hover, .iot-device:hover { background: var(--line); }
+    .nav-btn:hover { background: var(--glass-strong); }
+    .tab:hover { color: var(--fg); }
+    .swatch:hover { transform: scale(1.06); }
+  }
+
+  #app {
+    position: fixed; inset: 0;
+    max-width: 560px; margin: 0 auto;
+    display: flex; flex-direction: column;
+    background: var(--bg);
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Nav */
+  .nav {
+    height: 48px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 var(--pad);
+    position: relative; z-index: 20;
+    gap: 12px;
+  }
+  .nav-brand {
+    font-size: 20px; font-weight: 750; letter-spacing: -0.035em;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .nav-brand .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  .nav-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .nav-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--glass);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 0.5px solid var(--line);
+    transition: transform .15s var(--ease), background .2s;
+  }
+  .nav-btn:active { transform: scale(.9); }
+  .nav-btn svg { width: 16px; height: 16px; stroke-width: 2; }
+
+  /* Viewport */
+  .viewport { flex: 1; position: relative; overflow: hidden; }
+  .screen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s var(--ease);
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+  .screen.active { opacity: 1; pointer-events: auto; }
+  .screen::-webkit-scrollbar { display: none; }
+  .body { padding: 8px var(--pad) 20px; }
+
+  /* Auth */
+  #screen-auth { justify-content: center; padding-bottom: 40px; }
+  .auth-inner { padding: 0 24px; max-width: 420px; width: 100%; margin: 0 auto; }
+  .auth-brand {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; margin-bottom: 40px;
+  }
+  .auth-brand-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+  .auth-brand-name { font-size: 17px; font-weight: 700; letter-spacing: -0.03em; }
+  .auth-title {
+    font-size: 32px; font-weight: 750; letter-spacing: -0.045em;
+    margin: 0 0 10px; line-height: 1.1;
+  }
+  .auth-title .hl {
+    background: linear-gradient(180deg, transparent 62%, var(--accent) 62%, var(--accent) 90%, transparent 90%);
+    padding: 0 2px;
+  }
+  .auth-sub { font-size: 15px; color: var(--fg-2); line-height: 1.45; margin: 0 0 28px; }
+  .auth-card {
+    background: var(--bg-2); border-radius: var(--r-3);
+    padding: 20px; box-shadow: var(--shadow-1);
+  }
+  .auth-label {
+    font-size: 12px; font-weight: 500; color: var(--fg-2);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    margin-bottom: 10px; display: block;
+  }
+  .auth-input {
+    width: 100%;
+    background: var(--bg);
+    border-radius: var(--r-1);
+    padding: 15px 16px;
+    font-size: 18px; font-weight: 500;
+    letter-spacing: 0.18em;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg);
+    border: 1.5px solid transparent;
+    transition: border-color .2s, background .2s;
+  }
+  .auth-input::placeholder { color: var(--fg-3); letter-spacing: 0.18em; font-weight: 400; }
+  .auth-input:focus { border-color: var(--accent); background: var(--bg-2); }
+  .auth-btn {
+    width: 100%; margin-top: 12px;
+    background: var(--accent); color: var(--accent-ink);
+    padding: 16px; border-radius: var(--r-1);
+    font-size: 16px; font-weight: 650; letter-spacing: -0.01em;
+    transition: transform .15s var(--ease), filter .2s;
+  }
+  .auth-btn:active { transform: scale(.98); filter: brightness(.95); }
+  .auth-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .auth-msg { font-size: 13px; color: var(--red); font-weight: 500; min-height: 18px; margin-top: 12px; text-align: center; }
+  .auth-foot { text-align: center; font-size: 12.5px; color: var(--fg-3); margin-top: 20px; line-height: 1.5; }
+  .auth-foot b { color: var(--fg-2); font-weight: 600; }
+
+  /* Groups */
+  .group { margin-bottom: 22px; }
+  .group-header {
+    font-size: 13px; font-weight: 400; color: var(--fg-2);
+    text-transform: uppercase; letter-spacing: 0.02em;
+    padding: 0 var(--pad) 8px; line-height: 1.2;
+  }
+  .group-footer { font-size: 12px; color: var(--fg-3); line-height: 1.4; padding: 8px var(--pad) 0; }
+  .card { background: var(--bg-2); border-radius: var(--r-2); overflow: hidden; }
+  .card-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px var(--pad); min-height: 44px;
+    position: relative; transition: background .15s;
+  }
+  .card-row:active { background: var(--line); }
+  .card-row + .card-row::before {
+    content: ""; position: absolute; top: 0; left: calc(var(--pad) + 29px + 12px); right: 0;
+    height: 0.5px; background: var(--line);
+  }
+  .row-icon {
+    width: 29px; height: 29px; border-radius: 7px;
+    display: grid; place-items: center; flex-shrink: 0;
+    background: var(--fg); color: var(--bg-2);
+  }
+  .row-icon svg { width: 16px; height: 16px; stroke-width: 1.8; }
+  .row-icon.yellow { background: var(--accent); color: var(--accent-ink); }
+  .row-icon.green { background: var(--green); color: #fff; }
+  .row-icon.gray { background: var(--fg-3); color: #fff; }
+  .row-icon.blue { background: var(--blue); color: #fff; }
+  .row-icon.orange { background: var(--orange); color: #fff; }
+  .row-icon.red { background: var(--red); color: #fff; }
+  .row-main { flex: 1; min-width: 0; }
+  .row-title { font-size: 15px; font-weight: 400; letter-spacing: -0.01em; line-height: 1.2; }
+  .row-sub { font-size: 12.5px; color: var(--fg-2); margin-top: 2px; line-height: 1.3; }
+  .row-value { font-size: 15px; color: var(--fg-2); letter-spacing: -0.01em; }
+  .row-chevron { width: 7px; height: 12px; color: var(--fg-3); flex-shrink: 0; }
+
+  /* Scanner */
+  .scan-hero {
+    padding: 32px var(--pad) 0;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .radar {
+    width: 240px; height: 240px;
+    position: relative;
+    display: grid; place-items: center;
+    margin-bottom: 28px;
+  }
+  .pulse {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .radar.active .pulse { animation: softPulse 2.4s var(--ease) infinite; }
+  @keyframes softPulse {
+    0% { transform: scale(0.85); opacity: 0; }
+    20% { opacity: 0.35; }
+    100% { transform: scale(1.12); opacity: 0; }
+  }
+  .ring-base { position: absolute; inset: 0; border-radius: 50%; border: 1px solid var(--line); }
+  .ring-inner { position: absolute; inset: 22%; border-radius: 50%; border: 1px solid var(--line); opacity: .6; }
+  .scan-btn {
+    width: 128px; height: 128px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-ink);
+    display: grid; place-items: center;
+    box-shadow: 0 8px 28px rgba(255,204,0,0.28), 0 0 0 8px var(--bg);
+    transition: transform .3s var(--ease), box-shadow .3s, background .3s, color .3s;
+    position: relative; z-index: 3;
+  }
+  .scan-btn:active { transform: scale(0.94); }
+  .scan-btn svg { width: 46px; height: 46px; stroke-width: 1.6; }
+  .radar.active .scan-btn {
+    background: var(--fg); color: var(--bg);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.14), 0 0 0 8px var(--bg);
+  }
+  .radar.active .scan-btn svg { opacity: .5; }
+
+  .scan-label { font-size: 22px; font-weight: 700; letter-spacing: -0.04em; margin: 0 0 6px; text-align: center; }
+  .scan-sublabel { font-size: 14px; color: var(--fg-2); margin: 0; text-align: center; line-height: 1.4; min-height: 20px; }
+
+  /* Empty */
+  .empty { padding: 32px var(--pad); text-align: center; }
+  .empty-icon {
+    width: 52px; height: 52px; border-radius: 15px;
+    background: var(--bg-2); display: grid; place-items: center;
+    margin: 0 auto 14px; color: var(--fg-3);
+  }
+  .empty-icon svg { width: 24px; height: 24px; stroke-width: 1.6; }
+  .empty-title { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .empty-sub { font-size: 13px; color: var(--fg-2); line-height: 1.4; }
+  .empty-retry {
+    margin-top: 16px;
+    padding: 10px 20px;
+    background: var(--bg-2); color: var(--fg);
+    border-radius: 100px; font-size: 14px; font-weight: 500;
+    transition: transform .15s var(--ease);
+  }
+  .empty-retry:active { transform: scale(.96); }
+
+  .results { padding: 24px var(--pad) 0; }
+  .results-title {
+    font-size: 13px; font-weight: 400; color: var(--fg-2);
+    text-transform: uppercase; letter-spacing: 0.02em;
+    padding: 0 4px 8px;
+  }
+  .device {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg-2); border-radius: var(--r-2);
+    padding: 12px 14px; margin-bottom: 8px;
+    cursor: pointer; transition: transform .15s var(--ease), background .15s;
+    animation: deviceIn .35s var(--ease) both;
+  }
+  .device:active { transform: scale(.985); }
+  @keyframes deviceIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .device-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--bg); display: grid; place-items: center; flex-shrink: 0;
+  }
+  .device-icon svg { width: 22px; height: 22px; stroke-width: 1.7; color: var(--fg); }
+  .device-info { flex: 1; min-width: 0; }
+  .device-name { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .device-key {
+    font-size: 11.5px; color: var(--fg-2);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    letter-spacing: 0.02em; margin-top: 2px;
+  }
+  .device-signal {
+    font-size: 11px; font-weight: 600; color: var(--fg-2);
+    padding: 4px 8px; border-radius: 6px; background: var(--bg);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Detail */
+  .detail-hero { padding: 4px var(--pad) 18px; }
+  .hero-card {
+    background: var(--bg-2); border-radius: var(--r-3);
+    padding: 22px 22px 20px;
+    position: relative; overflow: hidden;
+  }
+  .hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .hero-pill {
+    font-size: 11.5px; font-weight: 600; color: var(--green);
+    background: rgba(52,199,89,0.12);
+    padding: 5px 9px; border-radius: 100px;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .hero-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .hero-label { font-size: 11.5px; color: var(--fg-2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+  .hero-speed {
+    font-size: 80px; font-weight: 700; letter-spacing: -0.06em;
+    line-height: 0.9; margin: 4px 0 0;
+    display: flex; align-items: baseline; gap: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-speed .unit { font-size: 16px; font-weight: 500; color: var(--fg-2); letter-spacing: 0; }
+  .hero-bar { height: 5px; background: var(--bg); border-radius: 100px; overflow: hidden; margin-top: 16px; }
+  .hero-bar > i { display: block; height: 100%; border-radius: 100px; background: var(--fg); transition: width .4s var(--ease); }
+  .hero-meta {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; margin-top: 16px; padding-top: 14px;
+    border-top: 0.5px solid var(--line);
+  }
+  .hero-meta-label { font-size: 11px; color: var(--fg-3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
+  .hero-meta-value { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; margin-top: 3px; font-variant-numeric: tabular-nums; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 0 var(--pad); margin-bottom: 22px; }
+  .stat { background: var(--bg-2); border-radius: var(--r-2); padding: 12px; }
+  .stat-label { font-size: 10.5px; color: var(--fg-2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
+  .stat-value { font-size: 20px; font-weight: 700; letter-spacing: -0.04em; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .stat-value .u { font-size: 11px; color: var(--fg-2); font-weight: 500; }
+  .stat-bar { height: 3px; background: var(--bg); border-radius: 100px; overflow: hidden; margin-top: 8px; }
+  .stat-bar > i { display: block; height: 100%; background: var(--fg); border-radius: 100px; transition: width .4s var(--ease); }
+
+  /* Map */
+  .map-card {
+    margin: 0 var(--pad) 18px;
+    background: var(--bg-2); border-radius: var(--r-3);
+    overflow: hidden; position: relative;
+    height: 130px;
+  }
+  .map-card svg { width: 100%; height: 100%; display: block; }
+  .map-pill {
+    position: absolute; top: 10px; left: 10px;
+    background: var(--glass-strong);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 0.5px solid var(--line);
+    padding: 5px 10px; border-radius: 100px;
+    font-size: 11px; font-weight: 600; letter-spacing: -0.01em;
+    color: var(--fg);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .map-pill .pin { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  /* Switch */
+  .switch {
+    width: 51px; height: 31px; border-radius: 100px;
+    background: var(--line-strong); position: relative; flex-shrink: 0;
+    transition: background .2s var(--ease);
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 27px; height: 27px; border-radius: 50%;
+    background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    transition: transform .22s var(--ease);
+  }
+  .switch.on { background: var(--green); }
+  .switch.on::after { transform: translateX(20px); }
+
+  .swatch-row { display: flex; gap: 10px; padding: 14px var(--pad); overflow-x: auto; }
+  .swatch-row::-webkit-scrollbar { display: none; }
+  .swatch { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; position: relative; transition: transform .15s var(--ease); }
+  .swatch:active { transform: scale(.9); }
+  .swatch.active::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--fg); }
+
+  .btn-danger {
+    width: calc(100% - 32px); margin: 0 var(--pad);
+    padding: 14px; background: var(--bg-2); color: var(--red);
+    border-radius: var(--r-2); font-size: 15px; font-weight: 500;
+    transition: background .15s;
+  }
+  .btn-danger:active { background: var(--line); }
+
+  /* Log */
+  .log-list { padding: 8px var(--pad); max-height: 220px; overflow-y: auto; }
+  .log-list::-webkit-scrollbar { display: none; }
+  .log-item {
+    display: flex; gap: 10px; padding: 8px 0;
+    font-size: 12.5px; color: var(--fg-2); line-height: 1.4;
+    border-bottom: 0.5px solid var(--line);
+  }
+  .log-item:last-child { border-bottom: none; }
+  .log-time {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px; color: var(--fg-3); flex-shrink: 0; width: 44px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Slider */
+  .slider-row { padding: 14px var(--pad) 18px; }
+  .slider-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .slider-title { font-size: 15px; letter-spacing: -0.01em; }
+  .slider-value { font-size: 15px; color: var(--fg-2); font-variant-numeric: tabular-nums; font-weight: 500; }
+  .slider-track { position: relative; height: 4px; background: var(--line); border-radius: 100px; cursor: pointer; }
+  .slider-fill { height: 100%; background: var(--accent); border-radius: 100px; width: 50%; }
+  .slider-knob {
+    position: absolute; top: 50%; left: 50%;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #fff; transform: translate(-50%,-50%);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(0,0,0,0.1);
+    cursor: grab;
+  }
+
+  /* Console */
+  .sheet-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.35);
+    opacity: 0; pointer-events: none;
+    transition: opacity .3s var(--ease);
+    z-index: 100;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+  }
+  .sheet-backdrop.show { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    background: var(--bg-2);
+    border-radius: 24px 24px 0 0;
+    padding: 12px 0 calc(env(safe-area-inset-bottom) + 12px);
+    transform: translateY(100%);
+    transition: transform .38s var(--ease);
+    z-index: 101;
+    max-height: 78vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.18);
+  }
+  .sheet.show { transform: translateY(0); }
+  .sheet-handle { width: 38px; height: 5px; border-radius: 100px; background: var(--line-strong); margin: 0 auto 12px; flex-shrink: 0; }
+  .sheet-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 var(--pad) 12px;
+    border-bottom: 0.5px solid var(--line);
+    flex-shrink: 0;
+  }
+  .sheet-title { font-size: 18px; font-weight: 700; letter-spacing: -0.03em; }
+  .sheet-close {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--bg); display: grid; place-items: center;
+    color: var(--fg-2);
+  }
+  .sheet-close svg { width: 14px; height: 14px; stroke-width: 2.4; }
+
+  .warn-box {
+    margin: 12px var(--pad);
+    background: rgba(255,149,0,0.1);
+    border: 0.5px solid rgba(255,149,0,0.28);
+    border-radius: var(--r-2);
+    padding: 12px 14px;
+    display: flex; gap: 10px; align-items: flex-start;
+    flex-shrink: 0;
+  }
+  .warn-box .warn-icon { color: var(--orange); flex-shrink: 0; margin-top: 1px; }
+  .warn-box .warn-icon svg { width: 18px; height: 18px; stroke-width: 2; }
+  .warn-box .warn-text { font-size: 12.5px; line-height: 1.42; color: var(--fg); }
+  .warn-box .warn-text b { font-weight: 700; }
+  .warn-box .warn-ok {
+    margin-top: 8px; padding: 7px 14px;
+    background: var(--orange); color: #fff;
+    border-radius: 100px; font-size: 13px; font-weight: 600;
+  }
+
+  .console {
+    flex: 1; overflow-y: auto;
+    padding: 12px var(--pad);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px; line-height: 1.55;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 120px;
+  }
+  .console::-webkit-scrollbar { display: none; }
+  .console-line { white-space: pre-wrap; word-break: break-all; }
+  .console-line.cmd { color: var(--blue); }
+  .console-line.ok { color: var(--green); }
+  .console-line.err { color: var(--red); }
+  .console-line.muted { color: var(--fg-3); }
+
+  .console-input-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px var(--pad);
+    border-top: 0.5px solid var(--line);
+    background: var(--bg-2);
+    flex-shrink: 0;
+  }
+  .console-prompt {
+    color: var(--green); font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+  }
+  .console-input {
+    flex: 1; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 13px; padding: 4px 0;
+    color: var(--fg); min-width: 0;
+  }
+  .console-input::placeholder { color: var(--fg-3); }
+  .console-send {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-ink);
+    display: grid; place-items: center;
+    flex-shrink: 0;
+    transition: transform .15s;
+  }
+  .console-send:active { transform: scale(.9); }
+  .console-send svg { width: 14px; height: 14px; stroke-width: 2.6; }
+
+  /* IoT */
+  .iot-hero { padding: 8px var(--pad) 18px; display: flex; gap: 12px; }
+  .iot-stat { flex: 1; background: var(--bg-2); border-radius: var(--r-2); padding: 14px; }
+  .iot-stat .lbl { font-size: 11px; color: var(--fg-2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
+  .iot-stat .val { font-size: 22px; font-weight: 700; letter-spacing: -0.03em; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+  .iot-device {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px var(--pad); position: relative;
+    transition: background .15s;
+  }
+  .iot-device:active { background: var(--line); }
+  .iot-device + .iot-device::before {
+    content: ""; position: absolute; top: 0; left: calc(var(--pad) + 29px + 12px); right: 0;
+    height: 0.5px; background: var(--line);
+  }
+  .iot-badge {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green); flex-shrink: 0;
+    box-shadow: 0 0 0 3px rgba(52,199,89,0.15);
+  }
+  .iot-badge.off { background: var(--fg-3); box-shadow: 0 0 0 3px var(--line); }
+
+  /* Tab bar */
+  .tabbar {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 8px var(--pad) calc(env(safe-area-inset-bottom) + 8px);
+    z-index: 30; pointer-events: none; display: none;
+  }
+  .tabbar.show { display: block; }
+  .tabbar-inner {
+    pointer-events: auto;
+    display: flex;
+    background: var(--glass);
+    backdrop-filter: blur(30px) saturate(180%);
+    -webkit-backdrop-filter: blur(30px) saturate(180%);
+    border: 0.5px solid var(--line);
+    border-radius: 100px;
+    padding: 5px;
+    box-shadow: var(--shadow-2);
+    position: relative;
+  }
+  .tab {
+    flex: 1; padding: 9px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    border-radius: 100px;
+    color: var(--fg-2);
+    transition: color .2s var(--ease), transform .15s var(--ease);
+    position: relative; z-index: 1;
+  }
+  .tab:active { transform: scale(.95); }
+  .tab.active { color: var(--fg); }
+  .tab svg { width: 20px; height: 20px; stroke-width: 2; }
+  .tab-label { font-size: 10px; font-weight: 600; letter-spacing: -0.01em; }
+  .tab-thumb {
+    position: absolute; top: 5px; bottom: 5px;
+    background: var(--bg-2);
+    border-radius: 100px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.04);
+    transition: transform .38s var(--ease), width .3s var(--ease);
+    pointer-events: none; z-index: 0;
+  }
+
+  .toast {
+    position: fixed; left: 50%;
+    bottom: calc(env(safe-area-inset-bottom) + 96px);
+    transform: translateX(-50%) translateY(16px);
+    background: var(--glass-strong);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    color: var(--fg); border: 0.5px solid var(--line);
+    padding: 10px 18px; border-radius: 100px;
+    font-size: 13.5px; font-weight: 500;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s var(--ease), transform .25s var(--ease);
+    z-index: 200; white-space: nowrap;
+    box-shadow: var(--shadow-2);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .push-enter { animation: pushIn .32s var(--ease); }
+  @keyframes pushIn { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  @media (max-height: 700px) {
+    .radar { width: 200px; height: 200px; margin-bottom: 20px; }
+    .scan-btn { width: 108px; height: 108px; }
+    .scan-btn svg { width: 38px; height: 38px; }
+    .hero-speed { font-size: 66px; }
+    .scan-hero { padding-top: 20px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="nav">
+    <div class="nav-brand" id="navBrand"><span class="dot"></span>AntiScooters</div>
+    <button class="nav-btn" id="backNavBtn" style="display:none;" aria-label="Back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="nav-actions">
+      <button class="nav-btn" id="themeBtn" aria-label="Theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="viewport">
+
+    <!-- AUTH -->
+    <div class="screen active" id="screen-auth">
+      <div class="auth-inner">
+        <div class="auth-brand">
+          <div class="auth-brand-dot"></div>
+          <div class="auth-brand-name">AntiScooters</div>
+        </div>
+        <h1 class="auth-title">Получи доступ<br>к <span class="hl">самокатам</span></h1>
+        <p class="auth-sub">Введи 11-значный ключ, который тебе выдали при активации. Без ключа приложение не откроется.</p>
+
+        <div class="auth-card">
+          <label class="auth-label" for="keyInput">Ключ доступа</label>
+          <input id="keyInput" class="auth-input" inputmode="numeric" maxlength="11" placeholder="00000000000" autocomplete="off" spellcheck="false">
+          <button class="auth-btn" id="keySubmit" disabled>Продолжить</button>
+          <div class="auth-msg" id="authMsg"></div>
+        </div>
+
+        <div class="auth-foot">
+          Ключ · 11 цифр · <b>Whoosh</b>, <b>Yandex</b> и <b>Urent</b>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCANNER -->
+    <div class="screen" id="screen-scanner">
+      <div class="scan-hero">
+        <div class="radar" id="radar">
+          <div class="ring-base"></div>
+          <div class="ring-inner"></div>
+          <div class="pulse"></div>
+          <div class="pulse" style="animation-delay: 1.2s;"></div>
+          <button class="scan-btn" id="scanBtn" aria-label="Scan">
+            <!-- Bluetooth icon -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/>
+            </svg>
+          </button>
+        </div>
+        <h2 class="scan-label" id="scanLabel">Готов к поиску</h2>
+        <p class="scan-sublabel" id="scanSublabel">Нажми, чтобы найти самокаты рядом</p>
+      </div>
+
+      <div id="resultsWrap" style="display:none;">
+        <div class="results">
+          <div class="results-title" id="resultsTitle">Найдено</div>
+          <div id="resultsList"></div>
+        </div>
+      </div>
+
+      <div class="empty" id="emptyState" style="display:none;">
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/>
+            <path d="M6 17h6l3-8h3M9 9h6"/>
+          </svg>
+        </div>
+        <div class="empty-title">Устройств не найдено</div>
+        <div class="empty-sub">Пока рядом нет активных самокатов. Попробуй ещё раз через минуту.</div>
+        <button class="empty-retry" id="emptyRetry">Повторить поиск</button>
+      </div>
+    </div>
+
+    <!-- DETAIL -->
+    <div class="screen" id="screen-detail">
+      <div class="detail-hero">
+        <div class="hero-card">
+          <div class="hero-top">
+            <div class="hero-label">Скорость</div>
+            <div class="hero-pill" id="connPill">Подключено</div>
+          </div>
+          <div class="hero-speed"><span id="speedVal">0</span><span class="unit">км/ч</span></div>
+          <div class="hero-bar"><i id="speedBar" style="width:0%"></i></div>
+          <div class="hero-meta">
+            <div>
+              <div class="hero-meta-label">Пробег</div>
+              <div class="hero-meta-value" id="odoVal">0 км</div>
+            </div>
+            <div>
+              <div class="hero-meta-label">Сессия</div>
+              <div class="hero-meta-value" id="sessionVal">00:00</div>
+            </div>
+            <div>
+              <div class="hero-meta-label">Темп.</div>
+              <div class="hero-meta-value" id="tempVal">21°</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="stat-label">Батарея</div>
+          <div class="stat-value"><span id="battVal">0</span><span class="u">%</span></div>
+          <div class="stat-bar"><i id="battBar" style="width:0%"></i></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Запас</div>
+          <div class="stat-value"><span id="rangeVal">0</span><span class="u">км</span></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Мотор</div>
+          <div class="stat-value"><span id="motorVal">0</span><span class="u">W</span></div>
+        </div>
+      </div>
+
+      <div class="map-card">
+        <svg viewBox="0 0 400 130" preserveAspectRatio="none">
+          <defs>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="0.5"/>
+            </pattern>
+          </defs>
+          <rect width="400" height="130" fill="var(--bg-2)"/>
+          <rect width="400" height="130" fill="url(#grid)"/>
+          <path d="M 20 100 Q 100 60 180 80 T 320 50 T 400 70" fill="none" stroke="var(--line-strong)" stroke-width="2" stroke-dasharray="4 4"/>
+          <path d="M 60 30 Q 140 20 200 50 T 380 40" fill="none" stroke="var(--line-strong)" stroke-width="1.5"/>
+          <circle cx="180" cy="80" r="7" fill="var(--accent)" stroke="var(--bg-2)" stroke-width="3"/>
+          <circle cx="180" cy="80" r="14" fill="none" stroke="var(--accent)" stroke-width="1" opacity="0.4"/>
+        </svg>
+        <div class="map-pill"><span class="pin"></span>Текущая позиция</div>
+      </div>
+
+      <div class="body" style="padding-top:0;">
+        <div class="group">
+          <div class="group-header">Управление</div>
+          <div class="card">
+            <div class="card-row">
+              <div class="row-main">
+                <div class="row-title">Ограничение скорости</div>
+                <div class="row-sub" id="limitSub">25 км/ч · заводское</div>
+              </div>
+              <div class="switch" data-toggle="limit"></div>
+            </div>
+            <div class="card-row">
+              <div class="row-main">
+                <div class="row-title">Геозоны</div>
+                <div class="row-sub" id="geoSub">Активны</div>
+              </div>
+              <div class="switch on" data-toggle="geo"></div>
+            </div>
+            <div class="card-row">
+              <div class="row-main">
+                <div class="row-title">Замок</div>
+                <div class="row-sub" id="lockSub">Заблокирован</div>
+              </div>
+              <div class="switch" data-toggle="lock"></div>
+            </div>
+            <div class="card-row">
+              <div class="row-main">
+                <div class="row-title">Круиз-контроль</div>
+                <div class="row-sub" id="cruiseSub">Выключен</div>
+              </div>
+              <div class="switch" data-toggle="cruise"></div>
+            </div>
+            <div class="card-row">
+              <div class="row-main">
+                <div class="row-title">Режим «Толчок»</div>
+                <div class="row-sub" id="kickSub">Старт с места</div>
+              </div>
+              <div class="switch" data-toggle="kick"></div>
+            </div>
+            <div class="card-row">
+              <div class="row-main">
+                <div class="row-title">Противоугонка</div>
+                <div class="row-sub" id="alarmSub">Не активна</div>
+              </div>
+              <div class="switch" data-toggle="alarm"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-header">Мощность</div>
+          <div class="card">
+            <div class="slider-row">
+              <div class="slider-head">
+                <div class="slider-title">Лимит мощности</div>
+                <div class="slider-value" id="powerVal">350 W</div>
+              </div>
+              <div class="slider-track" id="powerTrack">
+                <div class="slider-fill" id="powerFill"></div>
+                <div class="slider-knob" id="powerKnob"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-header">Действия</div>
+          <div class="card">
+            <div class="card-row" style="cursor:pointer;" id="beepRow">
+              <div class="row-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></div>
+              <div class="row-main"><div class="row-title">Подать сигнал</div></div>
+              <svg class="row-chevron" viewBox="0 0 7 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l5 5-5 5"/></svg>
+            </div>
+            <div class="card-row" style="cursor:pointer;" id="flashRow">
+              <div class="row-icon yellow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+              <div class="row-main"><div class="row-title">Мигнуть фарой</div></div>
+              <svg class="row-chevron" viewBox="0 0 7 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l5 5-5 5"/></svg>
+            </div>
+            <div class="card-row" style="cursor:pointer;" id="consoleRow">
+              <div class="row-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg></div>
+              <div class="row-main"><div class="row-title">Открыть консоль</div><div class="row-sub">Прямое управление контроллером</div></div>
+              <svg class="row-chevron" viewBox="0 0 7 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l5 5-5 5"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-header">Подсветка</div>
+          <div class="card">
+            <div class="swatch-row" id="swatches"></div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-header">Диагностика</div>
+          <div class="card">
+            <div class="card-row">
+              <div class="row-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
+              <div class="row-main"><div class="row-title">BMS</div><div class="row-sub" id="bmsSub">Норма</div></div>
+              <div class="row-value" id="bmsVal">OK</div>
+            </div>
+            <div class="card-row">
+              <div class="row-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
+              <div class="row-main"><div class="row-title">Мотор</div><div class="row-sub" id="motorSub">Норма</div></div>
+              <div class="row-value" id="motorDiag">OK</div>
+            </div>
+            <div class="card-row">
+              <div class="row-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
+              <div class="row-main"><div class="row-title">Контроллер</div><div class="row-sub" id="ctrlSub">Норма</div></div>
+              <div class="row-value" id="ctrlVal">OK</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-header">Журнал</div>
+          <div class="card">
+            <div class="log-list" id="logList"></div>
+          </div>
+        </div>
+
+        <button class="btn-danger" id="disconnectBtn">Отключиться</button>
+      </div>
+    </div>
+
+    <!-- IOT -->
+    <div class="screen" id="screen-iot">
+      <div class="iot-hero">
+        <div class="iot-stat"><div class="lbl">Подключено</div><div class="val" id="iotCount">3</div></div>
+        <div class="iot-stat"><div class="lbl">Онлайн</div><div class="val" id="iotOnline">2</div></div>
+        <div class="iot-stat"><div class="lbl">Сигнал</div><div class="val" id="iotSignal">98<span style="font-size:13px;color:var(--fg-2);">%</span></div></div>
+      </div>
+      <div class="body" style="padding-top:0;">
+        <div class="group">
+          <div class="group-header">Синхронизированные устройства</div>
+          <div class="card" id="iotList"></div>
+          <div class="group-footer">IoT-устройства используют тот же ключ доступа. Управление в фоне не расходует трафик.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="screen" id="screen-settings">
+      <div class="body">
+        <div class="group">
+          <div class="group-header">Подключение</div>
+          <div class="card">
+            <div class="card-row" id="btRow" style="cursor:pointer;">
+              <div class="row-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10-5 5V2l5 5L7 17"/></svg></div>
+              <div class="row-main">
+                <div class="row-title">Bluetooth</div>
+                <div class="row-sub" id="btStatus">Включён</div>
+              </div>
+              <div class="switch on" id="btSwitch"></div>
+            </div>
+            <div class="card-row" id="iotRow" style="cursor:pointer;">
+              <div class="row-icon yellow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
+              <div class="row-main">
+                <div class="row-title">IoT-устройства</div>
+                <div class="row-sub" id="iotStatus">3 подключено</div>
+              </div>
+              <svg class="row-chevron" viewBox="0 0 7 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1l5 5-5 5"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-header">Безопасность</div>
+          <div class="card">
+            <div class="card-row">
+              <div class="row-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/></svg></div>
+              <div class="row-main"><div class="row-title">Шифрование BLE</div><div class="row-sub">AES-128 · активно</div></div>
+              <div class="switch on"></div>
+            </div>
+            <div class="card-row">
+              <div class="row-icon gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+              <div class="row-main"><div class="row-title">Блокировка ключа</div><div class="row-sub">Через 5 минут простоя</div></div>
+              <div class="switch on"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
+          <div class="group-header">Приложение</div>
+          <div class="card">
+            <div class="card-row" style="cursor:pointer;" id="themeRow">
+              <div class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></div>
+              <div class="row-main"><div class="row-title">Тема</div></div>
+              <div class="row-value" id="themeValue">Светлая</div>
+            </div>
+            <div class="card-row">
+              <div class="row-main"><div class="row-title">Версия</div></div>
+              <div class="row-value">4.2.0</div>
+            </div>
+            <div class="card-row" style="cursor:pointer;" id="logoutRow">
+              <div class="row-main"><div class="row-title" style="color:var(--red);">Выйти из аккаунта</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="tabbar" id="tabbar">
+    <div class="tabbar-inner" id="tabbarInner">
+      <div class="tab-thumb" id="tabThumb"></div>
+      <button class="tab active" data-tab="scanner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></svg>
+        <span class="tab-label">Сканер</span>
+      </button>
+      <button class="tab" data-tab="iot">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span class="tab-label">IoT</span>
+      </button>
+      <button class="tab" data-tab="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span class="tab-label">Настройки</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="sheet-backdrop" id="sheetBackdrop"></div>
+  <div class="sheet" id="consoleSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div class="sheet-title">Консоль</div>
+      <button class="sheet-close" id="consoleClose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div id="consoleWarn" class="warn-box">
+      <div class="warn-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+      </div>
+      <div>
+        <div class="warn-text"><b>Осторожно.</b> Это прямой доступ к контроллеру самоката. Неверная команда может сбросить прошивку или заблокировать мотор. Если не уверен в своих действиях — просто закрой окно и ничего не трогай.</div>
+        <button class="warn-ok" id="consoleUnderstand">Понятно</button>
+      </div>
+    </div>
+    <div class="console" id="consoleOutput"></div>
+    <div class="console-input-row">
+      <span class="console-prompt">$</span>
+      <input class="console-input" id="consoleInput" placeholder="help" autocomplete="off" spellcheck="false">
+      <button class="console-send" id="consoleSend">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ================= KEY DATABASE ================= */
+const KEYS = [
+  "52086098710","20814587644","12945755061","64696165717","55815660280",
+  "47093722591","32948576055","64170113214","71743246594","46663979034",
+  "43223493498","88019438689","90899703275","44565746613","83633436224",
+  "98869276024","88839028590","85479974171","18671299777","38086107290",
+  "31464800600","66214284944","52073598392","90774911409","87144424544",
+  "88239999894","95617225418","32961173787","66612420727","23470498995",
+  "81708368677","44409862649","44386802675","37786841856","57884263029",
+  "89031874297","56534831602","12384806195","34850194569","45723858770",
+  "39287644307","78961280090","59683053450","45123663494","34682482269",
+  "50850645534","17812339069","17823451548","45145124566","97034568129",
+  "91767745532","72894303106","13046150294","73605817743","57895062006",
+  "47784322414","14070247100","97207361727","85913522330","68103808907",
+  "48439611199","85795877131","55705635486","53036364036","40123567002",
+  "33814450697","54566705547","22593385814","82782417286","47363182864",
+  "28511541294","95429140239","35900729469","23093964216","70011911640",
+  "41564837428","38320812154","64730603699","56908011460","74200453241",
+  "28633057032","81824731233","64617790235","20412298239","87891235011",
+  "91284443560","48497883342","48440831093","43579971576","65925899635",
+  "75269576531","13135699415","52448793227","44139834079","70960066947",
+  "93757217331","52760151413","43167665012","35305200600","82588328613",
+  "57151526928","45345079432","40163691461","31030081390","28163750405",
+  "11660197977","27544519274","20399106893","62000034269","71480089948",
+  "15315293639","29840580205","25757412412","87597539100","22420536652",
+  "89844386828","35078527968","89996778804","72632850052","28017851430",
+  "90844050044","37534715478","88827948445","97534345742","79795862813",
+  "41340944345","67557297581","45590410381","95272440525","16498472379",
+  "61050292018","49331903389","84552901176","23437197983","20937729751",
+  "99360122815","10855556728","65913581967","87633181935","62042853199",
+  "18971813827","29782681923","19846155528","69026622840","66015376848",
+  "35775862820","51510297940","55529100974","58787481047","24562768036"
+];
+const KEY_SET = new Set(KEYS);
+
+/* ================= DATA ================= */
+const BRANDS = ["Whoosh", "Yandex", "Urent"];
+const SUFFIX = ["Go","Ride","Mini","Pro","Max","Lite","One","Air","Flex","Plus","Ace","Prime","Wave","Spark","Neo","Urban"];
+const COLORS = ["#ffcc00","#ff3b30","#007aff","#34c759","#af52de","#ff9500","#5ac8fa","#ff2d55"];
+
+const randKey = () => Array.from({length:11}, () => Math.floor(Math.random()*10)).join("");
+const randName = () => {
+  const b = BRANDS[Math.floor(Math.random()*BRANDS.length)];
+  const s = SUFFIX[Math.floor(Math.random()*SUFFIX.length)];
+  const n = Math.floor(Math.random()*900+100);
+  return `${b} ${s} ${n}`;
+};
+const randRSSI = () => -(Math.floor(Math.random()*40+45));
+const randBatt = () => Math.floor(Math.random()*85+10);
+const pad = n => String(n).padStart(2,"0");
+
+/* ================= STATE ================= */
+const state = {
+  authed: false,
+  scooters: [],
+  current: null,
+  speed: 0,
+  simId: null,
+  battId: null,
+  sessionId: null,
+  diagId: null,
+  motionCleanup: null,
+  theme: localStorage.getItem("as_theme") || "light",
+  tab: "scanner",
+  sessionStart: 0,
+  odo: 0,
+  power: 350,
+  log: [],
+  consoleUnderstood: false,
+  consoleHistory: [],
+};
+
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+
+/* ================= THEME ================= */
+function applyTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  state.theme = t;
+  localStorage.setItem("as_theme", t);
+  $("#themeValue").textContent = t === "dark" ? "Тёмная" : "Светлая";
+}
+applyTheme(state.theme);
+
+/* ================= TOAST ================= */
+let toastId;
+function toast(msg) {
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastId);
+  toastId = setTimeout(() => el.classList.remove("show"), 1700);
+}
+
+/* ================= LOG ================= */
+function logEvent(text) {
+  const d = new Date();
+  state.log.unshift({ t: `${pad(d.getHours())}:${pad(d.getMinutes())}`, text });
+  if (state.log.length > 30) state.log.pop();
+  renderLog();
+}
+function renderLog() {
+  const el = $("#logList");
+  if (!el) return;
+  if (!state.log.length) {
+    el.innerHTML = '<div class="log-item"><div class="log-time">—</div><div>Пока нет событий</div></div>';
+    return;
+  }
+  el.innerHTML = state.log.map(l => `<div class="log-item"><div class="log-time">${l.t}</div><div>${l.text}</div></div>`).join("");
+}
+
+/* ================= TABS ================= */
+const tabbar = $("#tabbar");
+const tabThumb = $("#tabThumb");
+const tabbarInner = $("#tabbarInner");
+const tabs = $$(".tab");
+
+function positionThumb() {
+  const active = $(".tab.active");
+  if (!active) return;
+  const rect = active.getBoundingClientRect();
+  const parent = tabbarInner.getBoundingClientRect();
+  tabThumb.style.width = (rect.width) + "px";
+  tabThumb.style.transform = `translateX(${rect.left - parent.left - 5}px)`;
+}
+
+function setTab(name, silent=false) {
+  state.tab = name;
+  tabs.forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+  showScreen(name);
+  if (!silent) setTimeout(positionThumb, 10);
+}
+
+tabs.forEach(t => t.addEventListener("click", () => setTab(t.dataset.tab)));
+window.addEventListener("resize", () => setTimeout(positionThumb, 50));
+
+/* ================= SCREENS ================= */
+function showScreen(id) {
+  $$(".screen").forEach(s => s.classList.remove("active"));
+  const el = $("#screen-" + id);
+  if (el) el.classList.add("active");
+
+  const showTabbar = ["scanner", "iot", "settings"].includes(id);
+  tabbar.classList.toggle("show", showTabbar);
+  $("#backNavBtn").style.display = id === "detail" ? "grid" : "none";
+  $("#navBrand").style.display = id === "detail" ? "none" : "flex";
+
+  if (id === "detail" && state.current) {
+    el.classList.remove("push-enter");
+    void el.offsetWidth;
+    el.classList.add("push-enter");
+  }
+}
+
+/* ================= AUTH ================= */
+const keyInput = $("#keyInput");
+const keySubmit = $("#keySubmit");
+
+keyInput.addEventListener("input", e => {
+  e.target.value = e.target.value.replace(/\D/g,"").slice(0,11);
+  keySubmit.disabled = e.target.value.length !== 11;
+});
+keyInput.addEventListener("keydown", e => { if (e.key === "Enter" && !keySubmit.disabled) tryAuth(); });
+keySubmit.addEventListener("click", tryAuth);
+
+function tryAuth() {
+  const v = keyInput.value.trim();
+  const msg = $("#authMsg");
+  if (v.length !== 11) { msg.textContent = "Ключ должен содержать 11 цифр"; return; }
+  if (!KEY_SET.has(v)) { msg.textContent = "Неверный ключ доступа"; return; }
+  msg.textContent = "";
+  state.authed = true;
+  setTab("scanner");
+  setTimeout(positionThumb, 60);
+  renderIoT();
+}
+
+/* ================= SCAN ================= */
+const radar = $("#radar");
+const scanBtn = $("#scanBtn");
+const scanLabel = $("#scanLabel");
+const scanSublabel = $("#scanSublabel");
+const resultsWrap = $("#resultsWrap");
+const resultsList = $("#resultsList");
+const resultsTitle = $("#resultsTitle");
+const emptyState = $("#emptyState");
+let scanning = false;
+
+function startScan() {
+  if (scanning) return;
+  scanning = true;
+  state.scooters = [];
+  resultsWrap.style.display = "none";
+  emptyState.style.display = "none";
+  resultsList.innerHTML = "";
+  radar.classList.add("active");
+  scanBtn.disabled = true;
+  scanLabel.textContent = "Поиск…";
+  scanSublabel.textContent = "Bluetooth LE · 2.4 GHz";
+
+  let countdown = 3;
+  const tick = setInterval(() => {
+    countdown--;
+    if (countdown > 0) {
+      scanSublabel.textContent = `Сканирование ${countdown}с`;
+    } else {
+      clearInterval(tick);
+      radar.classList.remove("active");
+      scanBtn.disabled = false;
+      scanning = false;
+
+      // small chance of finding nothing
+      const total = Math.random() < 0.12 ? 0 : 3 + Math.floor(Math.random()*3);
+      if (total === 0) {
+        scanLabel.textContent = "Ничего не найдено";
+        scanSublabel.textContent = "Попробуй ещё раз";
+        emptyState.style.display = "block";
+        return;
+      }
+      scanLabel.textContent = "Устройства рядом";
+      scanSublabel.textContent = "Нажми, чтобы обновить";
+      resultsWrap.style.display = "block";
+      resultsTitle.textContent = "Поиск";
+      addDevices(total);
+    }
+  }, 800);
+}
+
+scanBtn.addEventListener("click", startScan);
+$("#emptyRetry").addEventListener("click", startScan);
+
+function addDevices(total) {
+  let n = 0;
+  const id = setInterval(() => {
+    state.scooters.push({
+      id: "sc_" + Math.random().toString(36).slice(2,9),
+      name: randName(),
+      key: randKey(),
+      rssi: randRSSI(),
+      batt: randBatt(),
+    });
+    renderScan();
+    n++;
+    if (n >= total) {
+      clearInterval(id);
+      resultsTitle.textContent = `Найдено · ${state.scooters.length}`;
+    }
+  }, 320);
+}
+
+function renderScan() {
+  resultsList.innerHTML = state.scooters.map(s => `
+    <div class="device" data-id="${s.id}">
+      <div class="device-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/>
+          <path d="M6 17h6l3-8h3M9 9h6"/>
+        </svg>
+      </div>
+      <div class="device-info">
+        <div class="device-name">${s.name}</div>
+        <div class="device-key">${s.key}</div>
+      </div>
+      <div class="device-signal">${s.rssi}</div>
+    </div>
+  `).join("");
+  $$(".device", resultsList).forEach(el => {
+    el.addEventListener("click", () => openScooter(el.dataset.id));
+  });
+}
+
+/* ================= DETAIL ================= */
+function openScooter(id) {
+  const s = state.scooters.find(x => x.id === id);
+  if (!s) return;
+  state.current = s;
+  state.sessionStart = Date.now();
+  state.odo = Math.floor(Math.random()*3000+200);
+  state.log = [];
+  logEvent(`Подключение к ${s.name}`);
+  logEvent(`BLE-ключ ${s.key} принят`);
+
+  showScreen("detail");
+
+  $("#battVal").textContent = s.batt;
+  $("#battBar").style.width = s.batt + "%";
+  $("#rangeVal").textContent = Math.round(s.batt * 0.45);
+  $("#motorVal").textContent = "0";
+  $("#speedVal").textContent = "0";
+  $("#speedBar").style.width = "0%";
+  $("#odoVal").textContent = state.odo + " км";
+  $("#sessionVal").textContent = "00:00";
+  $("#tempVal").textContent = (20 + Math.floor(Math.random()*8)) + "°";
+
+  $$(".switch").forEach(sw => sw.classList.remove("on"));
+  $$(".switch[data-toggle='geo']").forEach(sw => sw.classList.add("on"));
+  $("#limitSub").textContent = "25 км/ч · заводское";
+  $("#geoSub").textContent = "Активны";
+  $("#lockSub").textContent = "Заблокирован";
+  $("#cruiseSub").textContent = "Выключен";
+  $("#kickSub").textContent = "Старт с места";
+  $("#alarmSub").textContent = "Не активна";
+
+  state.power = 350;
+  updatePowerUI();
+
+  renderSwatches();
+  renderLog();
+  startBattery();
+  startSpeed();
+  startSession();
+  startDiagnostics();
+}
+
+function renderSwatches() {
+  const wrap = $("#swatches");
+  wrap.innerHTML = "";
+  COLORS.forEach((c, i) => {
+    const d = document.createElement("div");
+    d.className = "swatch" + (i === 0 ? " active" : "");
+    d.style.background = c;
+    d.addEventListener("click", () => {
+      $$(".swatch", wrap).forEach(x => x.classList.remove("active"));
+      d.classList.add("active");
+      logEvent(`Подсветка: ${c}`);
+      toast("Подсветка изменена");
+    });
+    wrap.appendChild(d);
+  });
+}
+
+function startBattery() {
+  clearInterval(state.battId);
+  state.battId = setInterval(() => {
+    if (!state.current) return;
+    state.current.batt = Math.max(5, Math.min(100, state.current.batt + (Math.random()<0.5?-1:0)));
+    $("#battVal").textContent = state.current.batt;
+    $("#battBar").style.width = state.current.batt + "%";
+    $("#rangeVal").textContent = Math.round(state.current.batt * 0.45);
+  }, 3200);
+}
+
+function startSession() {
+  clearInterval(state.sessionId);
+  state.sessionId = setInterval(() => {
+    if (!state.current) return;
+    const elapsed = Math.floor((Date.now() - state.sessionStart)/1000);
+    $("#sessionVal").textContent = `${pad(Math.floor(elapsed/60))}:${pad(elapsed%60)}`;
+    $("#tempVal").textContent = (20 + Math.floor(Math.random()*10)) + "°";
+  }, 1000);
+}
+
+function startDiagnostics() {
+  clearInterval(state.diagId);
+  state.diagId = setInterval(() => {
+    if (!state.current) return;
+    const ok = Math.random() > 0.15;
+    $("#bmsVal").textContent = ok ? "OK" : "WARN";
+    $("#bmsVal").style.color = ok ? "" : "var(--orange)";
+    $("#bmsSub").textContent = ok ? "Норма" : "Проверить";
+  }, 7000);
+}
+
+function startSpeed() {
+  clearInterval(state.simId);
+  if (state.motionCleanup) { state.motionCleanup(); state.motionCleanup = null; }
+  state.speed = 0;
+
+  const hasMotion = typeof DeviceMotionEvent !== "undefined";
+  const needsPermission = hasMotion && typeof DeviceMotionEvent.requestPermission === "function";
+
+  const useReal = () => {
+    let acc = 0;
+    const handler = (e) => {
+      const a = e.accelerationIncludingGravity;
+      if (!a) return;
+      const mag = Math.sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
+      acc = acc*0.85 + Math.abs(mag - 9.81)*0.15;
+      const target = Math.min(35, acc * 4.5);
+      state.speed = state.speed*0.85 + target*0.15;
+    };
+    window.addEventListener("devicemotion", handler);
+    state.motionCleanup = () => window.removeEventListener("devicemotion", handler);
+    state.simId = setInterval(updateSpeedUI, 120);
+  };
+
+  const useSim = () => {
+    let phase = 0;
+    state.simId = setInterval(() => {
+      phase += 0.05;
+      const base = (Math.sin(phase)*0.5 + 0.5) * 22;
+      state.speed = Math.max(0, base + (Math.random()-0.5)*2);
+      updateSpeedUI();
+    }, 120);
+  };
+
+  if (needsPermission) {
+    DeviceMotionEvent.requestPermission()
+      .then(r => r === "granted" ? useReal() : useSim())
+      .catch(() => useSim());
+  } else if (hasMotion) {
+    useReal();
+  } else {
+    useSim();
+  }
+}
+
+function updateSpeedUI() {
+  const v = Math.round(state.speed);
+  $("#speedVal").textContent = v;
+  $("#speedBar").style.width = Math.min(100, (v/35)*100) + "%";
+  $("#motorVal").textContent = Math.min(state.power, Math.round(v * 18));
+}
+
+function closeDetail() {
+  clearInterval(state.simId);
+  clearInterval(state.battId);
+  clearInterval(state.sessionId);
+  clearInterval(state.diagId);
+  if (state.motionCleanup) { state.motionCleanup(); state.motionCleanup = null; }
+  state.current = null;
+  state.speed = 0;
+  setTab("scanner");
+}
+
+$("#backNavBtn").addEventListener("click", closeDetail);
+$("#disconnectBtn").addEventListener("click", () => {
+  logEvent("Отключено");
+  toast("Отключено");
+  setTimeout(closeDetail, 350);
+});
+
+/* ================= POWER SLIDER ================= */
+const powerTrack = $("#powerTrack");
+const powerFill = $("#powerFill");
+const powerKnob = $("#powerKnob");
+let powerDrag = false;
+
+function updatePowerUI() {
+  const pct = ((state.power - 100) / 900) * 100;
+  powerFill.style.width = pct + "%";
+  powerKnob.style.left = pct + "%";
+  $("#powerVal").textContent = state.power + " W";
+}
+
+function powerSetFromX(clientX) {
+  const r = powerTrack.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+  state.power = Math.round(100 + pct * 900);
+  updatePowerUI();
+}
+
+powerTrack.addEventListener("mousedown", (e) => { powerDrag = true; powerSetFromX(e.clientX); });
+window.addEventListener("mousemove", (e) => { if (powerDrag) powerSetFromX(e.clientX); });
+window.addEventListener("mouseup", () => { if (powerDrag) { powerDrag = false; logEvent(`Лимит мощности: ${state.power} W`); } });
+powerTrack.addEventListener("touchstart", (e) => { powerDrag = true; powerSetFromX(e.touches[0].clientX); }, { passive: true });
+powerTrack.addEventListener("touchmove", (e) => { if (powerDrag) { powerSetFromX(e.touches[0].clientX); e.preventDefault(); } }, { passive: false });
+powerTrack.addEventListener("touchend", () => { if (powerDrag) { powerDrag = false; logEvent(`Лимит мощности: ${state.power} W`); } });
+
+/* ================= SWITCHES ================= */
+$$(".switch").forEach(sw => {
+  sw.addEventListener("click", (e) => {
+    e.stopPropagation();
+    sw.classList.toggle("on");
+    const t = sw.dataset.toggle;
+    const on = sw.classList.contains("on");
+    if (t === "limit") { $("#limitSub").textContent = on ? "Без ограничения · 45 км/ч" : "25 км/ч · заводское"; logEvent(on ? "Ограничение снято" : "Ограничение возвращено"); }
+    if (t === "geo") { $("#geoSub").textContent = on ? "Активны" : "Отключены"; logEvent(on ? "Геозоны включены" : "Геозоны отключены"); }
+    if (t === "lock") { $("#lockSub").textContent = on ? "Разблокирован" : "Заблокирован"; logEvent(on ? "Замок снят" : "Замок активирован"); }
+    if (t === "cruise") { $("#cruiseSub").textContent = on ? "Активен" : "Выключен"; logEvent(on ? "Круиз-контроль включён" : "Круиз-контроль выключен"); }
+    if (t === "kick") { $("#kickSub").textContent = on ? "С толчка" : "Старт с места"; logEvent(on ? "Режим «Толчок» включён" : "Режим «Толчок» выключен"); }
+    if (t === "alarm") { $("#alarmSub").textContent = on ? "Активна" : "Не активна"; logEvent(on ? "Противоугонка активирована" : "Противоугонка отключена"); }
+  });
+});
+
+/* ================= ACTIONS ================= */
+$("#beepRow").addEventListener("click", () => {
+  toast("Сигнал отправлен");
+  logEvent("Отправлен звуковой сигнал");
+  if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+});
+$("#flashRow").addEventListener("click", () => {
+  toast("Фара мигнула");
+  logEvent("Фара мигнула");
+  if (navigator.vibrate) navigator.vibrate(30);
+});
+
+/* ================= CONSOLE ================= */
+const sheetBackdrop = $("#sheetBackdrop");
+const consoleSheet = $("#consoleSheet");
+const consoleOutput = $("#consoleOutput");
+const consoleInput = $("#consoleInput");
+const consoleWarn = $("#consoleWarn");
+
+function openConsole() {
+  sheetBackdrop.classList.add("show");
+  consoleSheet.classList.add("show");
+  consoleWarn.style.display = state.consoleUnderstood ? "none" : "flex";
+  if (!state.consoleUnderstood) {
+    setTimeout(() => consoleWarn.style.display = "none", 8000);
+    state.consoleUnderstood = true;
+  }
+  setTimeout(() => consoleInput.focus(), 400);
+}
+function closeConsole() {
+  sheetBackdrop.classList.remove("show");
+  consoleSheet.classList.remove("show");
+}
+
+$("#consoleRow").addEventListener("click", openConsole);
+$("#consoleClose").addEventListener("click", closeConsole);
+$("#consoleUnderstand").addEventListener("click", () => { consoleWarn.style.display = "none"; });
+sheetBackdrop.addEventListener("click", closeConsole);
+
+function consolePrint(text, cls="") {
+  const div = document.createElement("div");
+  div.className = "console-line " + cls;
+  div.textContent = text;
+  consoleOutput.appendChild(div);
+  consoleOutput.scrollTop = consoleOutput.scrollHeight;
+}
+
+function consoleRun(cmd) {
+  const trimmed = cmd.trim();
+  if (!trimmed) return;
+  consolePrint("$ " + trimmed, "cmd");
+  const [base, ...args] = trimmed.split(/\s+/);
+  const a = args.join(" ");
+
+  switch (base.toLowerCase()) {
+    case "help":
+      consolePrint("Доступные команды:", "muted");
+      consolePrint("  status              — состояние контроллера");
+      consolePrint("  battery             — заряд и напряжение");
+      consolePrint("  speed [N]           — установить лимит скорости");
+      consolePrint("  unlock / lock       — управление замком");
+      consolePrint("  reboot              — перезагрузка контроллера");
+      consolePrint("  clear               — очистить консоль");
+      break;
+    case "status":
+      consolePrint("controller: OK", "ok");
+      consolePrint(`firmware: 1.4.${Math.floor(Math.random()*20)}`);
+      consolePrint(`uptime: ${Math.floor(Math.random()*9000)}s`);
+      consolePrint(`temp: ${(20+Math.random()*10).toFixed(1)}°C`);
+      break;
+    case "battery":
+      if (!state.current) { consolePrint("нет активного устройства", "err"); break; }
+      consolePrint(`level: ${state.current.batt}%`);
+      consolePrint(`voltage: ${(36 + Math.random()*3).toFixed(2)}V`);
+      consolePrint(`current: ${(Math.random()*4).toFixed(2)}A`);
+      break;
+    case "speed":
+      if (!a) { consolePrint("usage: speed 25", "err"); break; }
+      if (isNaN(+a)) { consolePrint("нужно число", "err"); break; }
+      consolePrint(`speed limit → ${a} km/h`, "ok");
+      logEvent(`Консоль: скорость ${a} км/ч`);
+      break;
+    case "unlock":
+      consolePrint("lock released", "ok");
+      logEvent("Консоль: замок снят");
+      break;
+    case "lock":
+      consolePrint("lock engaged", "ok");
+      logEvent("Консоль: замок активирован");
+      break;
+    case "reboot":
+      consolePrint("rebooting...");
+      setTimeout(() => consolePrint("controller rebooted", "ok"), 1200);
+      logEvent("Консоль: перезагрузка");
+      break;
+    case "clear":
+      consoleOutput.innerHTML = "";
+      break;
+    default:
+      consolePrint(`unknown command: ${base}`, "err");
+      consolePrint("введи help для списка", "muted");
+  }
+}
+
+$("#consoleSend").addEventListener("click", () => {
+  consoleRun(consoleInput.value);
+  state.consoleHistory.push(consoleInput.value);
+  consoleInput.value = "";
+});
+consoleInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    consoleRun(consoleInput.value);
+    state.consoleHistory.push(consoleInput.value);
+    consoleInput.value = "";
+  }
+});
+
+/* ================= IoT ================= */
+const IOT_DEVICES = [
+  { name: "Whoosh Tag Mini", type: "Трекер", online: true },
+  { name: "Yandex Smart Hub", type: "Хаб", online: true },
+  { name: "Urent Sensor", type: "Датчик", online: false },
+];
+
+function renderIoT() {
+  const list = $("#iotList");
+  const online = IOT_DEVICES.filter(d => d.online).length;
+  $("#iotCount").textContent = IOT_DEVICES.length;
+  $("#iotOnline").textContent = online;
+  $("#iotStatus").textContent = `${IOT_DEVICES.length} подключено`;
+
+  list.innerHTML = IOT_DEVICES.map(d => `
+    <div class="iot-device">
+      <div class="iot-badge ${d.online ? "" : "off"}"></div>
+      <div class="row-main">
+        <div class="row-title">${d.name}</div>
+        <div class="row-sub">${d.type} · ${d.online ? "онлайн" : "офлайн"}</div>
+      </div>
+    </div>
+  `).join("");
+}
+$("#iotRow").addEventListener("click", () => setTab("iot"));
+
+/* ================= SETTINGS ================= */
+$("#themeBtn").addEventListener("click", () => applyTheme(state.theme === "light" ? "dark" : "light"));
+$("#themeRow").addEventListener("click", () => applyTheme(state.theme === "light" ? "dark" : "light"));
+
+$("#btSwitch").addEventListener("click", (e) => {
+  e.stopPropagation();
+  const sw = e.currentTarget;
+  sw.classList.toggle("on");
+  $("#btStatus").textContent = sw.classList.contains("on") ? "Включён" : "Выключен";
+});
+
+$("#logoutRow").addEventListener("click", () => {
+  state.authed = false;
+  state.scooters = [];
+  keyInput.value = "";
+  keySubmit.disabled = true;
+  tabbar.classList.remove("show");
+  showScreen("auth");
+});
+
+/* ================= INIT ================= */
+renderIoT();
+consolePrint("AntiScooters console v4.2.0", "muted");
+consolePrint("введи help для списка команд", "muted");
+console.log("[AntiScooters] Keys:", KEYS.length);
+</script>
+</body>
+</html>
